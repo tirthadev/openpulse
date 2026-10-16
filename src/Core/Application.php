@@ -1,15 +1,15 @@
 <?php
 declare(strict_types=1);
+
 namespace OpenPulse\Core;
 
-use OpenPulse\Services\GreetingService;
-use OpenPulse\Contracts\DataProviderInterface;
+use OpenPulse\Contracts\DataCollectionInterface;
 
 class Application
 {
-    public function __construct(private readonly DataProviderInterface $dataProvider){}
+    public function __construct(private readonly DataCollectionInterface $dataCollectionService){}
 
     public function run() : array {
-        return $this->dataProvider->fetch();
+        return $this->dataCollectionService->collect();
     }
 }

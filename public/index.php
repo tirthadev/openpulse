@@ -1,36 +1,25 @@
 <?php
+
 declare(strict_types=1);
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
-use OpenPulse\Core\Application;
-use OpenPulse\Services\GreetingService;
-use OpenPulse\Services\ExampleDataProvider;
-use OpenPulse\Services\AlternativeDataProvider;
-use OpenPulse\Services\DataCollectionService;
-use OpenPulse\Repositories\InMemoryDataRepository;
-use OpenPulse\Repositories\MySqlDataRepository;
+if (parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) === '/favicon.ico') {
+    http_response_code(204);
+    exit;
+}
 
-$pdo = require dirname(__DIR__) . '/config/database.php';
+try {
+    $app = OpenPulse\Core\Bootstrap::createApplication();
 
-$database = new \OpenPulse\Core\Database($pdo);
-
-try{
-    //$application = new Application(new AlternativeDataProvider());
-    //$inMemoryDataRepository = new InMemoryDataRepository();
-    $mySqlDataRepository = new MySqlDataRepository($database);
-    $dataCollectionService = new DataCollectionService(new AlternativeDataProvider(), $mySqlDataRepository);
-    if (parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) === '/favicon.ico') {
-        http_response_code(204);
-        exit;
-    }
-    $result = $dataCollectionService->collect();
     header('Content-Type: application/json; charset=utf-8');
-    echo json_encode($result, JSON_THROW_ON_ERROR);
-    
-    //$inMemoryDataRepository->save($dataCollectionService->collect());
-    //echo json_encode($inMemoryDataRepository->getAll(), JSON_THROW_ON_ERROR);
-} catch(InvalidArgumentException $exception){
-    http_response_code(400);
-    echo 'Invalid input: ' . htmlspecialchars($exception->getMessage(), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
+    echo json_encode($app->run(), JSON_THROW_ON_ERROR);
+} catch (Throwable $exception) {
+    error_log((string) $exception);
+
+    http_response_code(500);
+    header('Content-Type: application/json; charset=utf-8');
+
+    echo json_encode(['error' => 'Internal server error']);
 }

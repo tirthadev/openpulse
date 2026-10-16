@@ -1,5 +1,7 @@
 /vendor/
-/.env
+.env
+.env.*
+!.env.example
 
 /storage/logs/*
 !/storage/logs/.gitkeep
