@@ -1,0 +1,13 @@
+{
+    "name": "tirthadev/openpulse",
+    "description": "Framework-free PHP and MySQL analytics platform",
+    "type": "project",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Tirtharup",
+            "email": "tirtharupbhattacharyya@gmail.com"
+        }
+    ],
+    "require": {}
+}
