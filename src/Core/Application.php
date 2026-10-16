@@ -6,8 +6,10 @@ use OpenPulse\Services\GreetingService;
 
 class Application
 {
-    public function run() : string {
-        $greetingService = new GreetingService();
-        return $greetingService->greet('OpenPulse');
+    public function __construct(private readonly GreetingService $greetingService){
+
+    }
+    public function run(string $name='OpenPulse') : string {
+        return $this->greetingService->greet($name);
     }
 }

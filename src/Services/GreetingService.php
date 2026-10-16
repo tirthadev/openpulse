@@ -2,9 +2,14 @@
 declare(strict_types=1);
 namespace OpenPulse\Services;
 
-class GreetingService
+use InvalidArgumentException;
+
+final class GreetingService
 {
     public function greet(string $name) : string {
-        return 'Hello, '.$name.'!';
+        if(trim($name) === ''){
+            throw new InvalidArgumentException('Name should not be empty!');
+        }
+        return 'Hello, '.trim($name).'!';
     }
 }
