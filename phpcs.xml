@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<ruleset name="OpenPulse">
+    <description>OpenPulse PHP coding standards</description>
+
+    <!-- Coding standard -->
+    <rule ref="PSR12"/>
+
+    <!-- Directories to scan -->
+    <file>src</file>
+    <file>public</file>
+    <file>tests</file>
+
+    <!-- Exclude dependencies and generated files -->
+    <exclude-pattern>vendor/*</exclude-pattern>
+
+    <!-- Line length configuration -->
+    <rule ref="Generic.Files.LineLength">
+        <properties>
+            <property name="lineLimit" value="120"/>
+            <property name="absoluteLineLimit" value="160"/>
+            <property name="ignoreComments" value="true"/>
+        </properties>
+    </rule>
+</ruleset>

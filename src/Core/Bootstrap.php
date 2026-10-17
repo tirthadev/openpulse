@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace OpenPulse\Core;
 
-use OpenPulse\Contracts\DataProviderInterface;
 use OpenPulse\Services\AlternativeDataProvider;
 use OpenPulse\Repositories\MySqlDataRepository;
 use OpenPulse\Services\DataCollectionService;
@@ -25,7 +24,8 @@ final class Bootstrap
             $dataProvider,
             $repository
         );
+        $router = new Router();
 
-        return new Application($dataCollectionService);
+        return new Application($dataCollectionService, $router);
     }
 }

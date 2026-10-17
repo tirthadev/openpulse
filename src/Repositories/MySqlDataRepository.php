@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace OpenPulse\Repositories;
@@ -8,7 +9,9 @@ use OpenPulse\Core\Database;
 
 final class MySqlDataRepository implements DataRepositoryInterface
 {
-    public function __construct(private readonly Database $database){}
+    public function __construct(private readonly Database $database)
+    {
+    }
 
     public function save(array $data): void
     {
@@ -18,5 +21,4 @@ final class MySqlDataRepository implements DataRepositoryInterface
         $query = $connection->prepare('INSERT INTO collected_data (`payload`) VALUES (:data)');
         $query->execute(['data' => $data]);
     }
-
 }
