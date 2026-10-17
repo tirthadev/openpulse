@@ -25,8 +25,7 @@ final class Router
         $handler = $this->routes[$method][$path] ?? null;
 
         if ($handler !== null) {
-            $data = $handler();
-
+            $data = $handler($request);
             return new Response($data, 200);
         }
 

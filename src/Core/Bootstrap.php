@@ -7,6 +7,8 @@ namespace OpenPulse\Core;
 use OpenPulse\Services\AlternativeDataProvider;
 use OpenPulse\Repositories\MySqlDataRepository;
 use OpenPulse\Services\DataCollectionService;
+use OpenPulse\Services\EventValidator;
+use OpenPulse\Repositories\MySqlEventRepository;
 
 final class Bootstrap
 {
@@ -20,12 +22,14 @@ final class Bootstrap
 
         $dataProvider = new AlternativeDataProvider();
 
+        $eventRepository = new MySqlEventRepository($database);
+
         $dataCollectionService = new DataCollectionService(
             $dataProvider,
             $repository
         );
         $router = new Router();
 
-        return new Application($dataCollectionService, $router);
+        return new Application($dataCollectionService, $router, new EventValidator(), $eventRepository);
     }
 }

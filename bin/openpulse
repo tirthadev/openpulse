@@ -1,0 +1,50 @@
+#!/usr/bin/env php
+<?php
+declare(strict_types=1);
+
+require dirname(__DIR__) . '/vendor/autoload.php';
+
+use OpenPulse\Core\MigrationRunner;
+
+$projectRoot = dirname(__DIR__);
+$currentDirectory = getcwd();
+
+if ($currentDirectory !== $projectRoot) {
+    fwrite(
+        STDERR,
+        "Error: Run this command from the OpenPulse project root.\n"
+    );
+    exit(1);
+}
+
+$command = $argv[1] ?? '';
+
+try {
+    switch ($command) {
+        case 'migrate':
+            $pdo = require $projectRoot . '/config/database.php';
+
+            $runner = new MigrationRunner(
+                $pdo,
+                $projectRoot . '/database/migrations'
+            );
+
+            $runner->migrate();
+
+            fwrite(STDOUT, "Migrations completed successfully.\n");
+            break;
+
+        default:
+            fwrite(
+                STDERR,
+                "Usage: php bin/openpulse migrate\n"
+            );
+            exit(1);
+    }
+} catch (Throwable $exception) {
+    fwrite(
+        STDERR,
+        sprintf("Command failed: %s\n", $exception->getMessage())
+    );
+    exit(1);
+}

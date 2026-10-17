@@ -15,9 +15,7 @@ final class Response
     public function send(): void
     {
         http_response_code($this->statusCode);
-
         header('Content-Type: application/json; charset=utf-8');
-
         echo json_encode($this->body, JSON_THROW_ON_ERROR);
     }
 }
