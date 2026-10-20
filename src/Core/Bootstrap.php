@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace OpenPulse\Core;
 
-use OpenPulse\Services\AlternativeDataProvider;
+use OpenPulse\Contracts\EventRepositoryInterface;
 use OpenPulse\Repositories\MySqlDataRepository;
-use OpenPulse\Services\DataCollectionService;
-use OpenPulse\Services\EventValidator;
 use OpenPulse\Repositories\MySqlEventRepository;
+use OpenPulse\Services\AlternativeDataProvider;
+use OpenPulse\Services\DataCollectionService;
 
 final class Bootstrap
 {
@@ -18,18 +18,33 @@ final class Bootstrap
 
         $database = new Database($pdo);
 
-        $repository = new MySqlDataRepository($database);
-
+        $dataRepository = new MySqlDataRepository($database);
         $dataProvider = new AlternativeDataProvider();
 
         $eventRepository = new MySqlEventRepository($database);
 
         $dataCollectionService = new DataCollectionService(
             $dataProvider,
-            $repository
+            $dataRepository
         );
+
+        $container = new Container();
+
+        $container->set(\PDO::class, $pdo);
+        $container->set(Database::class, $database);
+
+        $container->set(
+            EventRepositoryInterface::class,
+            $eventRepository
+        );
+
+        $container->set(
+            DataCollectionService::class,
+            $dataCollectionService
+        );
+
         $router = new Router();
 
-        return new Application($dataCollectionService, $router, new EventValidator(), $eventRepository);
+        return new Application($router, $container);
     }
 }

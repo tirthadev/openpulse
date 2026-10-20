@@ -31,4 +31,18 @@ final class MySqlEventRepository implements EventRepositoryInterface
                                 'properties' => $properties
                             ]);
     }
+
+    #[Override]
+    public function findAll(): array
+    {
+        $pdo = $this->database->getConnection();
+
+        $statement = $pdo->query(
+            'SELECT `id`, `event`, `user_id`, `properties`, `created_at`
+            FROM `events`
+            ORDER BY `created_at` DESC, `id` DESC'
+        );
+
+        return $statement->fetchAll();
+    }
 }
