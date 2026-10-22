@@ -1,10 +1,12 @@
 #!/usr/bin/env php
 <?php
+
 declare(strict_types=1);
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
-use OpenPulse\Core\MigrationRunner;
+use OpenPulse\Core\Bootstrap;
+use OpenPulse\Core\CommandResolver;
 
 $projectRoot = dirname(__DIR__);
 $currentDirectory = getcwd();
@@ -17,30 +19,38 @@ if ($currentDirectory !== $projectRoot) {
     exit(1);
 }
 
-$command = $argv[1] ?? '';
+$commandName = $argv[1] ?? '';
 
 try {
-    switch ($command) {
-        case 'migrate':
-            $pdo = require $projectRoot . '/config/database.php';
+    $container = Bootstrap::createContainer();
 
-            $runner = new MigrationRunner(
-                $pdo,
-                $projectRoot . '/database/migrations'
-            );
+    $commands = require $projectRoot . '/config/commands.php';
 
-            $runner->migrate();
+    $resolver = new CommandResolver($container, $commands);
 
-            fwrite(STDOUT, "Migrations completed successfully.\n");
-            break;
+    if ($commandName === '' || !in_array(
+        $commandName,
+        $resolver->names(),
+        true
+    )) {
+        fwrite(
+            STDERR,
+            "Usage: openpulse <command>\n\n"
+            . "Available commands:\n"
+        );
 
-        default:
-            fwrite(
-                STDERR,
-                "Usage: php bin/openpulse migrate\n"
-            );
-            exit(1);
+        foreach ($resolver->names() as $name) {
+            fwrite(STDERR, sprintf("  %s\n", $name));
+        }
+
+        exit(1);
     }
+
+    $command = $resolver->resolve($commandName);
+
+    $exitCode = $command->execute(array_slice($argv, 2));
+
+    exit($exitCode);
 } catch (Throwable $exception) {
     fwrite(
         STDERR,

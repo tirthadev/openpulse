@@ -1,34 +1,63 @@
 # OpenPulse
 
-OpenPulse is a framework-free PHP and MySQL API analytics platform for collecting and storing application events. It is built with modern PHP practices, Composer autoloading, clear separation of concerns, and a repository-based data access layer.
+**A framework-free PHP and MySQL analytics platform built to demonstrate modern PHP engineering practices.**
 
-## Current Status
+OpenPulse is a hands-on backend engineering project focused on clean architecture, object-oriented PHP, database persistence, external API integration, caching, automated testing, and operational reliability.
 
-The application currently supports:
+The project is being developed incrementally, with an emphasis on understanding the engineering decisions behind each component rather than relying on a full-stack framework.
 
-- A lightweight request and response flow with a custom router.
-- `GET /api/health` for a basic health check.
-- `POST /api/events` to accept and persist event data.
-- Event validation for the required `event` field.
-- MySQL persistence through PDO and prepared statements.
-- JSON storage for event properties.
-- Optional `user_id` and `properties` fields, stored as SQL `NULL` when omitted.
-- A migration runner for applying database migrations.
-- A CLI command for running migrations.
-- Composer PSR-4 autoloading.
-- PHPUnit and PHPCS tooling configured for the codebase.
+## Tech Stack
 
-The event endpoint has been verified with valid requests and invalid blank event names. Valid events are saved to the `events` table, while invalid event names return HTTP 400 without inserting a row.
+- **Language:** PHP 8.5
+- **Dependency management:** Composer
+- **Database:** MySQL
+- **Caching:** Redis with Predis
+- **Testing:** PHPUnit
+- **Static analysis:** PHPStan
+- **Coding standards:** PHP_CodeSniffer (PSR-12)
+- **Architecture:** Framework-free, object-oriented PHP with dependency injection
 
-## Technology Stack
+## Features
 
-- PHP 8.3+
-- MySQL
-- PDO
-- Composer
-- PHPUnit
-- PHP_CodeSniffer (PSR-12)
-- Laravel Valet for local development
+### Application architecture
+
+- Front controller and application bootstrap
+- Lightweight HTTP request, response, and routing components
+- Dependency injection container
+- Interface-based service and repository bindings
+- PSR-4 autoloading through Composer
+
+### Database and persistence
+
+- MySQL integration through PDO
+- Prepared statements for database operations
+- Repository pattern for separating persistence from business logic
+- Versioned database migrations
+- Migration tracking to avoid reapplying completed migrations
+- Transaction-based persistence for multi-step database operations
+
+### External API integration
+
+- World Bank API integration for country data
+- HTTP error and response validation
+- JSON decoding and payload validation
+- Normalization of external data before persistence
+- Batch persistence using MySQL upserts
+
+### Redis caching
+
+- Cache abstraction through `CacheInterface`
+- Redis implementation using Predis
+- JSON serialization for cached values
+- Time-to-live support
+- Cache invalidation after country imports
+
+### Background job queue (in progress)
+
+- MySQL-backed job and failed-job tables
+- Queue contract for dispatching and reserving jobs
+- Retry scheduling and failed-job persistence foundations
+- Planned worker CLI, reservation recovery, and automated queue tests
 
 ## Project Structure
 
@@ -37,138 +66,82 @@ openpulse/
 ├── bin/
 │   └── openpulse
 ├── config/
-│   └── database.php
+│   ├── commands.php
+│   ├── database.php
+│   ├── environment.php
+│   ├── redis.php
+│   └── services.php
 ├── database/
-│   ├── migrations/
-│   └── seeders/
+│   └── migrations/
 ├── public/
-│   └── index.php
+├── routes/
+│   └── web.php
+├── scripts/
 ├── src/
+│   ├── Commands/
 │   ├── Contracts/
-│   ├── Core/
 │   ├── Controllers/
-│   ├── DTOs/
-│   ├── Exceptions/
-│   ├── Jobs/
-│   ├── Middleware/
-│   ├── Models/
+│   ├── Core/
 │   ├── Repositories/
 │   └── Services/
-├── templates/
 ├── tests/
-│   ├── Integration/
-│   └── Unit/
 ├── .env.example
 ├── composer.json
-├── composer.lock
-├── phpunit.xml
-└── phpcs.xml
+└── phpstan.neon
 ```
 
-Some directories are in place for the project's planned architecture and may not yet contain implemented features.
+## Requirements
 
-## API
+- PHP 8.5 or a compatible version meeting the project's Composer requirements
+- Composer
+- MySQL
+- Redis
+- A local PHP web server or a development environment such as Laravel Valet
 
-### Health Check
+Required PHP extensions depend on the Composer dependencies and configuration, including PDO MySQL and cURL.
 
-```http
-GET /api/health
-```
+## Installation
 
-Example response:
-
-```json
-{
-  "status": "ok"
-}
-```
-
-### Collect an Event
-
-```http
-POST /api/events
-Content-Type: application/json
-```
-
-Example request:
-
-```json
-{
-  "event": "page_view",
-  "user_id": "user_123",
-  "properties": {
-    "page": "/pricing",
-    "source": "google"
-  }
-}
-```
-
-Example success response:
-
-```json
-{
-  "message": "Event received",
-  "event": "page_view"
-}
-```
-
-The `event` field is required and must be a non-empty string. `user_id` and `properties` are optional. At the current stage, validation of these optional fields is planned but not yet implemented.
-
-A request with a blank `event` value returns HTTP 400 and is not persisted.
-
-## Database
-
-The migration system tracks executed migration files in a `migrations` table. The current event migration creates an `events` table with these fields:
-
-| Column | Purpose |
-|---|---|
-| `id` | Auto-incrementing event identifier |
-| `event` | Event name |
-| `user_id` | Optional user identifier |
-| `properties` | Optional JSON event properties |
-| `created_at` | Event creation timestamp |
-
-Database settings are loaded from environment configuration through `config/database.php`. Keep local credentials in `.env`; do not commit `.env` to version control.
-
-## Local Setup
-
-1. Install PHP 8.3 or later, Composer, and MySQL.
-2. Install project dependencies:
-
-   ```bash
-   composer install
-   ```
-
-3. Create a local `.env` file based on `.env.example` and configure the database connection.
-4. Create the configured MySQL database.
-5. Run database migrations from the project root:
-
-   ```bash
-   openpulse migrate
-   ```
-
-   The `openpulse` shell alias is configured locally to run `php bin/openpulse` from the project root. If the alias is not configured, run:
-
-   ```bash
-   php bin/openpulse migrate
-   ```
-
-6. Configure the local web server or Laravel Valet to serve the `public/` directory.
-
-## Development Checks
-
-Run the configured code-style check:
+Clone the repository and install dependencies:
 
 ```bash
-phpcs
+git clone <your-repository-url>
+cd openpulse
+composer install
 ```
 
-Run the test suite:
+Create your local environment configuration:
 
 ```bash
-vendor/bin/phpunit
+cp .env.example .env
 ```
 
-## Current Development Focus
+Update `.env` with your local MySQL and Redis connection details. Keep `.env` and all credentials out of version control.
 
-The next planned improvement is to extend `EventValidator` to validate the optional `user_id` and `properties` fields. Further work will build on the existing routing, validation, migration, and persistence foundations.
+Ensure MySQL and Redis are running, and create the database configured in your environment.
+
+Run the database migrations:
+
+```bash
+openpulse migrate
+```
+
+Import country data from the World Bank API:
+
+```bash
+openpulse countries:import
+```
+
+The import requires network access to the external API.
+
+## HTTP Endpoints
+
+The current application routes include:
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `GET` | `/api/countries` | Retrieve country data, using Redis caching |
+| `GET` | `/api/events` | Retrieve events |
+| `POST` | `/api/events` | Submit an event |
+
+Run the application through your configured local

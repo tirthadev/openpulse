@@ -4,45 +4,49 @@ declare(strict_types=1);
 
 namespace OpenPulse\Core;
 
-use OpenPulse\Contracts\EventRepositoryInterface;
-use OpenPulse\Repositories\MySqlDataRepository;
-use OpenPulse\Repositories\MySqlEventRepository;
-use OpenPulse\Services\AlternativeDataProvider;
-use OpenPulse\Services\DataCollectionService;
+use PDO;
+use Predis\Client;
+use Predis\ClientInterface;
 
 final class Bootstrap
 {
-    public static function createApplication(): Application
+    public static function createContainer(): Container
     {
-        $pdo = require dirname(__DIR__, 2) . '/config/database.php';
+        $projectRoot = dirname(__DIR__, 2);
 
-        $database = new Database($pdo);
-
-        $dataRepository = new MySqlDataRepository($database);
-        $dataProvider = new AlternativeDataProvider();
-
-        $eventRepository = new MySqlEventRepository($database);
-
-        $dataCollectionService = new DataCollectionService(
-            $dataProvider,
-            $dataRepository
-        );
+        $pdo = require $projectRoot . '/config/database.php';
+        $redisConfig = require $projectRoot . '/config/redis.php';
 
         $container = new Container();
 
-        $container->set(\PDO::class, $pdo);
-        $container->set(Database::class, $database);
+        // Register infrastructure that cannot be autowired.
+        $container->set(PDO::class, $pdo);
 
-        $container->set(
-            EventRepositoryInterface::class,
-            $eventRepository
-        );
+        $redis = new Client([
+            'scheme' => $redisConfig['scheme'],
+            'host' => $redisConfig['host'],
+            'port' => $redisConfig['port'],
+            'password' => $redisConfig['password'] !== ''
+                ? $redisConfig['password']
+                : null,
+            'database' => $redisConfig['database'],
+        ]);
 
-        $container->set(
-            DataCollectionService::class,
-            $dataCollectionService
-        );
+        $container->set(ClientInterface::class, $redis);
 
+        // Load service bindings from configuration.
+        $services = require $projectRoot . '/config/services.php';
+
+        foreach ($services as $id => $concrete) {
+            $container->bind($id, $concrete);
+        }
+
+        return $container;
+    }
+
+    public static function createApplication(): Application
+    {
+        $container = self::createContainer();
         $router = new Router();
 
         return new Application($router, $container);

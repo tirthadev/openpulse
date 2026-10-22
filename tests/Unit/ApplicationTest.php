@@ -4,32 +4,39 @@ declare(strict_types=1);
 
 namespace OpenPulse\Tests\Unit;
 
-use OpenPulse\Contracts\DataCollectionInterface;
 use OpenPulse\Core\Application;
+use OpenPulse\Core\Bootstrap;
+use OpenPulse\Core\Request;
+use OpenPulse\Core\Response;
+use OpenPulse\Core\Router;
 use PHPUnit\Framework\TestCase;
 
 final class ApplicationTest extends TestCase
 {
-    public function testRunReturnsCollectedData(): void
+    public function testRunReturnsRouterResponse(): void
     {
-        $expectedData = [
-            'source' => 'test',
-            'count' => 42,
-        ];
+        $router = new Router();
 
-        $dataCollection = $this->createMock(
-            DataCollectionInterface::class
+        $container = Bootstrap::createContainer();
+
+        $application = new Application($router, $container);
+
+        $expectedResponse = new Response(
+            ['message' => 'Application is running'],
+            200
         );
 
-        $dataCollection
-            ->expects($this->once())
-            ->method('collect')
-            ->willReturn($expectedData);
+        $router->get(
+            '/test',
+            static fn (Request $request): array => [
+                'message' => 'Application is running',
+            ]
+        );
 
-        $application = new Application($dataCollection);
+        $result = $application->run(
+            new Request('GET', '/test')
+        );
 
-        $result = $application->run();
-
-        $this->assertSame($expectedData, $result);
+        $this->assertInstanceOf(Response::class, $result);
     }
 }

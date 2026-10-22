@@ -1,0 +1,15 @@
+<?php
+
+declare(strict_types=1);
+
+return <<<'SQL'
+CREATE TABLE IF NOT EXISTS countries (
+    `code` CHAR(2) NOT NULL PRIMARY KEY,
+    `name` VARCHAR(150) NOT NULL,
+    `capital` VARCHAR(150) NOT NULL DEFAULT '',
+    `region` VARCHAR(150) NOT NULL DEFAULT '',
+    `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP
+);
+SQL;

@@ -1,14 +1,31 @@
+# Composer dependencies
 /vendor/
+
+# Environment variables and secrets
 .env
 .env.*
 !.env.example
 
+# Application runtime files
+/var/*
+!/var/.gitkeep
+
+# Application logs
 /storage/logs/*
 !/storage/logs/.gitkeep
 
-.phpunit.cache/
-.php-cs-fixer.cache
+# Test and analysis caches
+/.phpunit.cache/
+/.php-cs-fixer.cache
+/.phpstan-cache/
+/var/phpstan/
+
+# OS files
 .DS_Store
+Thumbs.db
+
+# IDE and editor settings
 .idea/
 .vscode/
-/config/database.php
+
+# Local configuration containing credentials

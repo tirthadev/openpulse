@@ -4,30 +4,33 @@ declare(strict_types=1);
 
 namespace OpenPulse\Tests\Unit;
 
-use OpenPulse\Contracts\DataCollectionInterface;
 use OpenPulse\Core\Application;
+use OpenPulse\Core\Bootstrap;
+use OpenPulse\Core\Request;
+use OpenPulse\Core\Router;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 
 final class ApplicationExceptionTest extends TestCase
 {
-    public function testRunPropagatesCollectionException(): void
+    public function testRunPropagatesRouterException(): void
     {
-        $dataCollection = $this->createMock(
-            DataCollectionInterface::class
+        $router = new Router();
+
+        $container = Bootstrap::createContainer();
+
+        $application = new Application($router, $container);
+
+        $router->get(
+            '/test',
+            static function (Request $request): array {
+                throw new RuntimeException('Request dispatch failed');
+            }
         );
 
-        $dataCollection
-            ->expects($this->once())
-            ->method('collect')
-            ->willThrowException(
-                new \RuntimeException('Collection failed')
-            );
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Request dispatch failed');
 
-        $application = new Application($dataCollection);
-
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('Collection failed');
-
-        $application->run();
+        $application->run(new Request('GET', '/test'));
     }
 }

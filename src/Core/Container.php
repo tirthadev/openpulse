@@ -12,7 +12,14 @@ use RuntimeException;
 final class Container
 {
     /**
-     * Explicitly registered instances.
+     * Interface-to-implementation mappings.
+     *
+     * @var array<string, class-string>
+     */
+    private array $bindings = [];
+
+    /**
+     * Explicitly registered or resolved instances.
      *
      * @var array<string, object>
      */
@@ -26,6 +33,42 @@ final class Container
     private array $resolving = [];
 
     /**
+     * Register an interface-to-implementation mapping.
+     *
+     * @param class-string $id
+     * @param class-string $concrete
+     */
+    public function bind(string $id, string $concrete): void
+    {
+        if (!interface_exists($id) && !class_exists($id)) {
+            throw new RuntimeException(
+                sprintf('Binding target "%s" does not exist.', $id)
+            );
+        }
+
+        if (!class_exists($concrete)) {
+            throw new RuntimeException(
+                sprintf('Concrete class "%s" does not exist.', $concrete)
+            );
+        }
+
+        if (!is_a($concrete, $id, true)) {
+            throw new RuntimeException(
+                sprintf(
+                    'Class "%s" does not implement or extend "%s".',
+                    $concrete,
+                    $id
+                )
+            );
+        }
+
+        $this->bindings[$id] = $concrete;
+
+        // A new binding must not leave a stale instance cached.
+        unset($this->instances[$id]);
+    }
+
+    /**
      * Register an existing instance.
      */
     public function set(string $id, object $instance): void
@@ -34,7 +77,7 @@ final class Container
     }
 
     /**
-     * Retrieve an instance or resolve a class automatically.
+     * Retrieve a registered instance or resolve a class automatically.
      */
     public function get(string $id): object
     {
@@ -61,7 +104,7 @@ final class Container
             );
         }
 
-        if (!class_exists($id)) {
+        if (!class_exists($id) && !interface_exists($id)) {
             throw new RuntimeException(
                 sprintf(
                     'Class or service "%s" does not exist or is not registered.',
@@ -70,21 +113,38 @@ final class Container
             );
         }
 
-        $reflection = new ReflectionClass($id);
-
-        if (!$reflection->isInstantiable()) {
-            throw new RuntimeException(
-                sprintf('Class "%s" is not instantiable.', $id)
-            );
-        }
-
         $this->resolving[$id] = true;
 
         try {
+            if (isset($this->bindings[$id])) {
+                $instance = $this->get($this->bindings[$id]);
+
+                $this->set($id, $instance);
+
+                return $instance;
+            }
+
+            if (interface_exists($id)) {
+                throw new RuntimeException(
+                    sprintf(
+                        'Interface "%s" has no registered binding.',
+                        $id
+                    )
+                );
+            }
+
+            $reflection = new ReflectionClass($id);
+
+            if (!$reflection->isInstantiable()) {
+                throw new RuntimeException(
+                    sprintf('Class "%s" is not instantiable.', $id)
+                );
+            }
+
             $constructor = $reflection->getConstructor();
 
             if ($constructor === null) {
-                $newInstance = $reflection->newInstance();
+                $instance = $reflection->newInstance();
             } else {
                 $dependencies = [];
 
@@ -92,10 +152,12 @@ final class Container
                     $dependencies[] = $this->resolveParameter($parameter);
                 }
 
-                $newInstance = $reflection->newInstanceArgs($dependencies);
+                $instance = $reflection->newInstanceArgs($dependencies);
             }
-            $this->set($id, $newInstance);
-            return $newInstance;
+
+            $this->set($id, $instance);
+
+            return $instance;
         } finally {
             unset($this->resolving[$id]);
         }
