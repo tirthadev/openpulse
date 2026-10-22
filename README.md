@@ -105,7 +105,7 @@ Required PHP extensions depend on the Composer dependencies and configuration, i
 Clone the repository and install dependencies:
 
 ```bash
-git clone <your-repository-url>
+git clone https://github.com/tirthadev/openpulse.git
 cd openpulse
 composer install
 ```
