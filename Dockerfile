@@ -1,4 +1,3 @@
-
 FROM php:8.5-fpm
 
 RUN apt-get update \
@@ -21,5 +20,7 @@ RUN composer install \
     --no-progress
 
 COPY . .
+
+COPY docker/php/production.ini /usr/local/etc/php/conf.d/zz-production.ini
 
 CMD ["php-fpm"]
