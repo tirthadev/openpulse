@@ -1,0 +1,41 @@
+name: OpenPulse Deployment
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  verify-access:
+    name: Verify GCP and VM Access
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOYER_SA }}
+          create_credentials_file: true
+
+      - name: Set up Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Verify Google Cloud identity
+        run: |
+          gcloud auth list
+          gcloud compute instances describe "${{ vars.GCP_VM_NAME }}" \
+            --project="${{ vars.GCP_PROJECT_ID }}" \
+            --zone="${{ vars.GCP_VM_ZONE }}" \
+            --format="value(status)"
+
+      - name: Test SSH through IAP
+        run: |
+          gcloud compute ssh "${{ vars.GCP_VM_NAME }}" \
+            --project="${{ vars.GCP_PROJECT_ID }}" \
+            --zone="${{ vars.GCP_VM_ZONE }}" \
+            --tunnel-through-iap \
+            --quiet \
+            --command="whoami && hostname"
