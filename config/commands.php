@@ -12,6 +12,9 @@ use OpenPulse\Core\JobHandlerRegistry;
 use OpenPulse\Core\Worker;
 use OpenPulse\Jobs\CountryImportJobHandler;
 use OpenPulse\Commands\QueuePushCommand;
+use OpenPulse\Core\QueueConfig;
+use OpenPulse\Commands\ProfileCommand;
+use OpenPulse\Core\Profiler;
 
 $projectRoot = dirname(__DIR__);
 
@@ -34,10 +37,20 @@ return [
             ),
         ]);
 
+        $queueConfig = $container->get(QueueConfig::class);
+
+        if (!$queueConfig instanceof QueueConfig) {
+            throw new \LogicException(
+                'Queue configuration is not registered.'
+            );
+        }
+
         return new QueueWorkCommand(
             new Worker(
                 $container->get(QueueInterface::class),
                 $registry,
+                maxAttempts: $queueConfig->maxAttempts,
+                retryDelaySeconds: $queueConfig->retryDelaySeconds,
             ),
         );
     },
@@ -47,6 +60,15 @@ return [
     ): CommandInterface {
         return new QueuePushCommand(
             $container->get(QueueInterface::class),
+        );
+    },
+
+    'profile' => static function (
+        Container $container
+    ): CommandInterface {
+        return new ProfileCommand(
+            $container->get(\PDO::class),
+            new Profiler(),
         );
     },
 ];

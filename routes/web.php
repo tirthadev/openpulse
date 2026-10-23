@@ -19,4 +19,9 @@ return static function (
     $router->get('/api/events', [$events, 'index']);
 
     $router->get('/api/countries', [$countries, 'index']);
+
+    $router->get('/health', static fn (): array => [
+        'status' => 'ok',
+        'application' => 'OpenPulse',
+    ]);
 };

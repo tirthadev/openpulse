@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace OpenPulse\Core;
 
+use OpenPulse\Contracts\QueueInterface;
+use OpenPulse\Repositories\MySqlQueue;
 use PDO;
-use Predis\Client;
 use Predis\ClientInterface;
 
 final class Bootstrap
@@ -13,6 +14,8 @@ final class Bootstrap
     public static function createContainer(): Container
     {
         $projectRoot = dirname(__DIR__, 2);
+
+        require_once $projectRoot . '/config/environment.php';
 
         $pdo = require $projectRoot . '/config/database.php';
         $redisConfig = require $projectRoot . '/config/redis.php';
@@ -22,24 +25,31 @@ final class Bootstrap
         // Register infrastructure that cannot be autowired.
         $container->set(PDO::class, $pdo);
 
-        $redis = new Client([
-            'scheme' => $redisConfig['scheme'],
-            'host' => $redisConfig['host'],
-            'port' => $redisConfig['port'],
-            'password' => $redisConfig['password'] !== ''
-                ? $redisConfig['password']
-                : null,
-            'database' => $redisConfig['database'],
-        ]);
+        $redisFactory = new RedisClientFactory();
 
-        $container->set(ClientInterface::class, $redis);
+        $container->factory(
+            ClientInterface::class,
+            static fn (): ClientInterface => $redisFactory->create($redisConfig)
+        );
 
-        // Load service bindings from configuration.
         $services = require $projectRoot . '/config/services.php';
 
         foreach ($services as $id => $concrete) {
             $container->bind($id, $concrete);
         }
+
+        // Register queue configuration and its configured implementation.
+        $queueConfig = QueueConfig::fromEnvironment();
+
+        $container->set(QueueConfig::class, $queueConfig);
+
+        $container->set(
+            QueueInterface::class,
+            new MySqlQueue(
+                $pdo,
+                $queueConfig->reservationTimeoutSeconds
+            )
+        );
 
         return $container;
     }

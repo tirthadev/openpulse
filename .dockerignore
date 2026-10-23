@@ -1,0 +1,11 @@
+.git/
+.env
+.env.*
+!.env.example
+vendor/
+.phpunit.cache/
+.phpstan/
+.phpstan-cache/
+.php-cs-fixer.cache/
+docker/nginx/certs/
+.DS_Store

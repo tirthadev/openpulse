@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OpenPulse\Core;
 
+use Closure;
 use ReflectionClass;
 use ReflectionNamedType;
 use ReflectionParameter;
@@ -17,6 +18,13 @@ final class Container
      * @var array<string, class-string>
      */
     private array $bindings = [];
+
+    /**
+     * Lazy service factories.
+     *
+     * @var array<string, Closure(): object>
+     */
+    private array $factories = [];
 
     /**
      * Explicitly registered or resolved instances.
@@ -64,8 +72,26 @@ final class Container
 
         $this->bindings[$id] = $concrete;
 
-        // A new binding must not leave a stale instance cached.
-        unset($this->instances[$id]);
+        unset($this->factories[$id], $this->instances[$id]);
+    }
+
+    /**
+     * Register a lazy service factory.
+     *
+     * @param class-string $id
+     * @param Closure(): object $factory
+     */
+    public function factory(string $id, Closure $factory): void
+    {
+        if (!interface_exists($id) && !class_exists($id)) {
+            throw new RuntimeException(
+                sprintf('Factory target "%s" does not exist.', $id)
+            );
+        }
+
+        $this->factories[$id] = $factory;
+
+        unset($this->bindings[$id], $this->instances[$id]);
     }
 
     /**
@@ -116,6 +142,14 @@ final class Container
         $this->resolving[$id] = true;
 
         try {
+            if (isset($this->factories[$id])) {
+                $instance = ($this->factories[$id])();
+
+                $this->set($id, $instance);
+
+                return $instance;
+            }
+
             if (isset($this->bindings[$id])) {
                 $instance = $this->get($this->bindings[$id]);
 

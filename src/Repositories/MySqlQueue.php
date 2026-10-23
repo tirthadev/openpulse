@@ -13,7 +13,13 @@ final class MySqlQueue implements QueueInterface
 {
     public function __construct(
         private readonly PDO $pdo,
+        private readonly int $reservationTimeoutSeconds = 300
     ) {
+        if ($this->reservationTimeoutSeconds < 1) {
+            throw new \InvalidArgumentException(
+                'Reservation timeout must be at least one second.'
+            );
+        }
     }
 
     public function push(
@@ -55,58 +61,66 @@ final class MySqlQueue implements QueueInterface
         $this->pdo->beginTransaction();
 
         try {
-            $statement = $this->pdo->prepare(
-                <<<'SQL'
+                $sql = <<<SQL
                 SELECT id, queue, payload, attempts
                 FROM jobs
                 WHERE queue = :queue
-                  AND reserved_at IS NULL
-                  AND available_at <= NOW()
+                AND (
+                    reserved_at IS NULL
+                    OR reserved_at < DATE_SUB(NOW(), INTERVAL {$this->reservationTimeoutSeconds} SECOND)
+                )
+                AND available_at <= NOW()
                 ORDER BY id ASC
                 LIMIT 1
                 FOR UPDATE
-                SQL
-            );
+                SQL;
 
-            $statement->execute(['queue' => $queue]);
-            $job = $statement->fetch(PDO::FETCH_ASSOC);
+                $statement = $this->pdo->prepare($sql);
 
-            if ($job === false) {
+                $statement->execute(['queue' => $queue]);
+                $job = $statement->fetch(PDO::FETCH_ASSOC);
+
+                if ($job === false) {
+                    $this->pdo->commit();
+
+                    return null;
+                }
+
+                $update = $this->pdo->prepare(
+                    <<<'SQL'
+                    UPDATE jobs
+                    SET reserved_at = NOW(),
+                        attempts = attempts + 1
+                    WHERE id = :id
+                    SQL
+                );
+
+                $update->execute(['id' => $job['id']]);
+
+                $payload = json_decode(
+                    (string) $job['payload'],
+                    true,
+                    512,
+                    JSON_THROW_ON_ERROR,
+                );
+
+                if (
+                    !is_array($payload)
+                    || !isset($payload['type'], $payload['data'])
+                    || !is_string($payload['type'])
+                    || !is_array($payload['data'])
+                ) {
+                    throw new RuntimeException('Invalid job payload structure.');
+                }
+
                 $this->pdo->commit();
 
-                return null;
-            }
-
-            $update = $this->pdo->prepare(
-                <<<'SQL'
-                UPDATE jobs
-                SET reserved_at = NOW(),
-                    attempts = attempts + 1
-                WHERE id = :id
-                SQL
-            );
-
-            $update->execute(['id' => $job['id']]);
-
-            $this->pdo->commit();
-
-            $payload = json_decode(
-                (string) $job['payload'],
-                true,
-                512,
-                JSON_THROW_ON_ERROR,
-            );
-
-            if (!is_array($payload)) {
-                throw new RuntimeException('Invalid job payload.');
-            }
-
-            return [
-                'id' => (int) $job['id'],
-                'queue' => (string) $job['queue'],
-                'attempts' => (int) $job['attempts'] + 1,
-                'payload' => $payload,
-            ];
+                return [
+                    'id' => (int) $job['id'],
+                    'queue' => (string) $job['queue'],
+                    'attempts' => (int) $job['attempts'] + 1,
+                    'payload' => $payload,
+                ];
         } catch (Throwable $exception) {
             if ($this->pdo->inTransaction()) {
                 $this->pdo->rollBack();

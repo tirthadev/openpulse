@@ -24,5 +24,4 @@ return [
     CountryProviderInterface::class => WorldBankCountryProvider::class,
     CountryRepositoryInterface::class => MySqlCountryRepository::class,
     CacheInterface::class => RedisCache::class,
-    QueueInterface::class => MySqlQueue::class,
 ];

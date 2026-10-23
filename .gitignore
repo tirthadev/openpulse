@@ -29,3 +29,6 @@ Thumbs.db
 .vscode/
 
 # Local configuration containing credentials
+# Local TLS certificates and private keys
+/docker/nginx/certs/
+*.key
