@@ -14,6 +14,8 @@ use OpenPulse\Services\AlternativeDataProvider;
 use OpenPulse\Services\WorldBankCountryProvider;
 use OpenPulse\Contracts\CacheInterface;
 use OpenPulse\Core\RedisCache;
+use OpenPulse\Contracts\QueueInterface;
+use OpenPulse\Repositories\MySqlQueue;
 
 return [
     EventRepositoryInterface::class => MySqlEventRepository::class,
@@ -22,4 +24,5 @@ return [
     CountryProviderInterface::class => WorldBankCountryProvider::class,
     CountryRepositoryInterface::class => MySqlCountryRepository::class,
     CacheInterface::class => RedisCache::class,
+    QueueInterface::class => MySqlQueue::class,
 ];
