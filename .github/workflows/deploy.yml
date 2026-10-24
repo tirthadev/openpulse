@@ -48,19 +48,11 @@ jobs:
             --quiet \
             --command="sudo /usr/local/sbin/openpulse-deploy"
 
-      - name: Verify public application health
+      - name: Verify application health through IAP
         run: |
-          EXTERNAL_IP="$(gcloud compute instances describe \
-            "${{ vars.GCP_VM_NAME }}" \
+          gcloud compute ssh "${{ vars.GCP_VM_NAME }}" \
             --project="${{ vars.GCP_PROJECT_ID }}" \
             --zone="${{ vars.GCP_VM_ZONE }}" \
-            --format="get(networkInterfaces[0].accessConfigs[0].natIP)")"
-
-          echo "Checking OpenPulse at $EXTERNAL_IP"
-
-          curl --fail --show-error --silent \
-            --retry 10 \
-            --retry-delay 3 \
-            --retry-connrefused \
-            "http://${EXTERNAL_IP}:8080/health"
-          echo
+            --tunnel-through-iap \
+            --quiet \
+            --command="curl --fail --show-error http://localhost:8080/health"
