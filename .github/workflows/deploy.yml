@@ -7,10 +7,15 @@ permissions:
   contents: read
   id-token: write
 
+concurrency:
+  group: openpulse-production-deploy
+  cancel-in-progress: false
+
 jobs:
-  verify-access:
-    name: Verify GCP and VM Access
+  deploy:
+    name: Deploy OpenPulse to GCP
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Authenticate to Google Cloud
@@ -23,19 +28,39 @@ jobs:
       - name: Set up Google Cloud CLI
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Verify Google Cloud identity
+      - name: Verify VM status
         run: |
-          gcloud auth list
-          gcloud compute instances describe "${{ vars.GCP_VM_NAME }}" \
+          STATUS="$(gcloud compute instances describe \
+            "${{ vars.GCP_VM_NAME }}" \
             --project="${{ vars.GCP_PROJECT_ID }}" \
             --zone="${{ vars.GCP_VM_ZONE }}" \
-            --format="value(status)"
+            --format="value(status)")"
 
-      - name: Test SSH through IAP
+          echo "VM status: $STATUS"
+          test "$STATUS" = "RUNNING"
+
+      - name: Deploy through IAP
         run: |
           gcloud compute ssh "${{ vars.GCP_VM_NAME }}" \
             --project="${{ vars.GCP_PROJECT_ID }}" \
             --zone="${{ vars.GCP_VM_ZONE }}" \
             --tunnel-through-iap \
             --quiet \
-            --command="whoami && hostname"
+            --command="sudo /usr/local/sbin/openpulse-deploy"
+
+      - name: Verify public application health
+        run: |
+          EXTERNAL_IP="$(gcloud compute instances describe \
+            "${{ vars.GCP_VM_NAME }}" \
+            --project="${{ vars.GCP_PROJECT_ID }}" \
+            --zone="${{ vars.GCP_VM_ZONE }}" \
+            --format="get(networkInterfaces[0].accessConfigs[0].natIP)")"
+
+          echo "Checking OpenPulse at $EXTERNAL_IP"
+
+          curl --fail --show-error --silent \
+            --retry 10 \
+            --retry-delay 3 \
+            --retry-connrefused \
+            "http://${EXTERNAL_IP}:8080/health"
+          echo
