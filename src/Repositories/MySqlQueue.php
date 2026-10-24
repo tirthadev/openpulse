@@ -214,6 +214,60 @@ final class MySqlQueue implements QueueInterface
         }
     }
 
+
+    /**
+     * @return array{
+     *     id: int,
+     *     queue: string,
+     *     payload: array<string, mixed>
+     * }|null
+     */
+    public function findFailed(int $failedJobId): ?array
+    {
+        if ($failedJobId < 1) {
+            throw new \InvalidArgumentException(
+                'Failed job ID must be positive.'
+            );
+        }
+
+        $statement = $this->pdo->prepare(
+            'SELECT id, queue, payload FROM failed_jobs WHERE id = :id'
+        );
+
+        $statement->execute(['id' => $failedJobId]);
+
+        $job = $statement->fetch(PDO::FETCH_ASSOC);
+
+        if ($job === false) {
+            return null;
+        }
+
+        $payload = json_decode(
+            (string) $job['payload'],
+            true,
+            512,
+            JSON_THROW_ON_ERROR,
+        );
+
+        if (
+            !is_array($payload)
+            || !isset($payload['type'], $payload['data'])
+            || !is_string($payload['type'])
+            || !is_array($payload['data'])
+        ) {
+            throw new RuntimeException(
+                'Invalid failed job payload structure.'
+            );
+        }
+
+        return [
+            'id' => (int) $job['id'],
+            'queue' => (string) $job['queue'],
+            'payload' => $payload,
+        ];
+    }
+
+
     private static function createUuid(): string
     {
         $bytes = random_bytes(16);

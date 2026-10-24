@@ -349,4 +349,59 @@ final class MySqlQueueTest extends TestCase
 
         $queue->fail(42, 'Import failed');
     }
+
+
+    public function testFindFailedReturnsOriginalQueueAndPayload(): void
+    {
+        $statement = $this->createMock(PDOStatement::class);
+
+        $statement
+            ->expects(self::once())
+            ->method('execute')
+            ->with(['id' => 42])
+            ->willReturn(true);
+
+        $statement
+            ->expects(self::once())
+            ->method('fetch')
+            ->with(PDO::FETCH_ASSOC)
+            ->willReturn([
+                'id' => '42',
+                'queue' => 'default',
+                'payload' => json_encode([
+                    'type' => 'openalex.import',
+                    'data' => [
+                        'cursor' => 'cursor-example',
+                        'per_page' => 100,
+                        'pages_remaining' => 3,
+                    ],
+                ], JSON_THROW_ON_ERROR),
+            ]);
+
+        $pdo = $this->createMock(PDO::class);
+
+        $pdo
+            ->expects(self::once())
+            ->method('prepare')
+            ->with(
+                'SELECT id, queue, payload FROM failed_jobs WHERE id = :id'
+            )
+            ->willReturn($statement);
+
+        $queue = new MySqlQueue($pdo);
+
+        self::assertSame([
+            'id' => 42,
+            'queue' => 'default',
+            'payload' => [
+                'type' => 'openalex.import',
+                'data' => [
+                    'cursor' => 'cursor-example',
+                    'per_page' => 100,
+                    'pages_remaining' => 3,
+                ],
+            ],
+        ], $queue->findFailed(42));
+    }
+
 }

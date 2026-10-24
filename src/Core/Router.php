@@ -22,24 +22,35 @@ final class Router
     {
         $method = $request->getMethod();
         $path = $request->getPath();
+
         $handler = $this->routes[$method][$path] ?? null;
 
         if ($handler !== null) {
-            $data = $handler($request);
-            return new Response($data, 200);
+            $result = $handler($request);
+
+            if ($result instanceof Response) {
+                return $result;
+            }
+
+            if (!is_array($result)) {
+                throw new \UnexpectedValueException(
+                    'Route handlers must return an array or a Response.'
+                );
+            }
+
+            return Response::json($result);
         }
 
-        // Check whether the path exists for another HTTP method.
         foreach ($this->routes as $routes) {
             if (array_key_exists($path, $routes)) {
-                return new Response(
+                return Response::json(
                     ['error' => 'Method not allowed'],
                     405
                 );
             }
         }
 
-        return new Response(
+        return Response::json(
             ['error' => 'Route not found'],
             404
         );

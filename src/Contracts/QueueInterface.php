@@ -21,4 +21,15 @@ interface QueueInterface
     public function release(int $jobId, int $delaySeconds = 0): void;
 
     public function fail(int $jobId, string $exception): void;
+
+    /**
+     * Retrieve a failed job's original queue and payload.
+     *
+     * @return array{
+     *     id: int,
+     *     queue: string,
+     *     payload: array<string, mixed>
+     * }|null
+     */
+    public function findFailed(int $failedJobId): ?array;
 }

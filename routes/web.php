@@ -5,6 +5,8 @@ use OpenPulse\Controllers\EventController;
 use OpenPulse\Controllers\CountryController;
 use OpenPulse\Core\Container;
 use OpenPulse\Core\Router;
+use OpenPulse\Controllers\OpenAlexSearchController;
+use OpenPulse\Controllers\OpenAlexSearchPageController;
 
 return static function (
     Router $router,
@@ -13,6 +15,8 @@ return static function (
     //Controller Initializations
     $events = $container->get(EventController::class);
     $countries = $container->get(CountryController::class);
+    $openAlexSearch = $container->get(OpenAlexSearchController::class);
+    $openAlexSearchPage = $container->get(OpenAlexSearchPageController::class);
 
     //Routes Initializations
     $router->post('/api/events', [$events, 'store']);
@@ -24,4 +28,14 @@ return static function (
         'status' => 'ok',
         'application' => 'OpenPulse Running from GCP',
     ]);
+
+    $router->get(
+        '/api/openalex/works',
+        [$openAlexSearch, 'index']
+    );
+
+    $router->get(
+        '/openalex',
+        [$openAlexSearchPage, 'index']
+    );
 };

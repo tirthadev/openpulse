@@ -6,16 +6,39 @@ namespace OpenPulse\Core;
 
 final class Response
 {
-    public function __construct(
-        private readonly array $body,
-        private readonly int $statusCode = 200
+    private function __construct(
+        private readonly string $body,
+        private readonly int $statusCode,
+        private readonly string $contentType
     ) {
+    }
+
+    public static function json(
+        array $body,
+        int $statusCode = 200
+    ): self {
+        return new self(
+            json_encode($body, JSON_THROW_ON_ERROR),
+            $statusCode,
+            'application/json; charset=utf-8'
+        );
+    }
+
+    public static function html(
+        string $body,
+        int $statusCode = 200
+    ): self {
+        return new self(
+            $body,
+            $statusCode,
+            'text/html; charset=utf-8'
+        );
     }
 
     public function send(): void
     {
         http_response_code($this->statusCode);
-        header('Content-Type: application/json; charset=utf-8');
-        echo json_encode($this->body, JSON_THROW_ON_ERROR);
+        header('Content-Type: ' . $this->contentType);
+        echo $this->body;
     }
 }

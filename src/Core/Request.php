@@ -11,7 +11,8 @@ final class Request
     public function __construct(
         private readonly string $method,
         private readonly string $path,
-        private readonly array $body = []
+        private readonly array $body = [],
+        private readonly array $queryParams = []
     ) {
     }
 
@@ -19,10 +20,20 @@ final class Request
     {
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
-        $path = parse_url(
-            $_SERVER['REQUEST_URI'] ?? '/',
-            PHP_URL_PATH
-        ) ?: '/';
+        $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
+
+        $path = parse_url($requestUri, PHP_URL_PATH) ?: '/';
+
+        $queryString = parse_url(
+            $requestUri,
+            PHP_URL_QUERY
+        );
+
+        $queryParams = [];
+
+        if (is_string($queryString) && $queryString !== '') {
+            parse_str($queryString, $queryParams);
+        }
 
         $rawBody = file_get_contents('php://input');
 
@@ -45,7 +56,12 @@ final class Request
             $body = $decoded;
         }
 
-        return new self($method, $path, $body);
+        return new self(
+            $method,
+            $path,
+            $body,
+            $queryParams
+        );
     }
 
     public function getMethod(): string
@@ -61,5 +77,10 @@ final class Request
     public function getBody(): array
     {
         return $this->body;
+    }
+
+    public function getQueryParams(): array
+    {
+        return $this->queryParams;
     }
 }
