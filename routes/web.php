@@ -22,6 +22,6 @@ return static function (
 
     $router->get('/health', static fn (): array => [
         'status' => 'ok',
-        'application' => 'OpenPulse',
+        'application' => 'OpenPulse Running from GCP',
     ]);
 };
