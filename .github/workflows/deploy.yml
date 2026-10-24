@@ -28,6 +28,11 @@ jobs:
       - name: Set up Google Cloud CLI
         uses: google-github-actions/setup-gcloud@v2
 
+      - name: Inspect deployer OS Login profile
+        run: |
+          gcloud compute os-login describe-profile \
+            --format="yaml(posixAccounts,sshPublicKeys)"
+
       - name: Verify VM status
         run: |
           STATUS="$(gcloud compute instances describe \
